@@ -6,14 +6,7 @@ import uuidv4 from 'uuid/v4';
 const api = db => {
 	const User = db.model('User', userSchema);
 	const Company = db.model('Company', companySchema);
-	var TOKEN = 'Admin';
-	/*	new Company({ name: 'Brynjar', punchCount: 5 }).save((err, company) => {
-		if (err) {
-			console.log('ERROR');
-		} else {
-			console.log(company);
-		}
-	});*/
+
 	var app = express();
 	app.use(bodyParser.json());
 
@@ -42,7 +35,7 @@ const api = db => {
 				punchCount: company.punchCount
 			}));
 			res.json({ company: filteredData });
-		})
+		});
 	});
 
 	// Gets a specific company, given a valid id
@@ -66,17 +59,18 @@ const api = db => {
 	});
 
 	// Registers a new company to the punchcard.com service
-	//spyrja í dæmatíma hvað þarf að passa 
 	app.post('/api/companies', function (req, res) {
-		console.log("kemst inn í post");
 		if (req.headers.authorization !== TOKEN) {
-			res.statusCode = 401
+			res.statusCode = 401;
 			return res.send('Not allowed');
 		}
-		if (!req.body.hasOwnProperty('name') ||
-			req.body.name === ""
+		if (
+			!req.body.hasOwnProperty('name') ||
+			!req.body.hasOwnProperty('punchCount') ||
+			req.body.name == '' ||
+			req.body.punchCount == null
 		) {
-			console.log("fyrsta precondition failed");
+			console.log('fyrsta precondition failed');
 			res.statusCode = 412;
 			return res.send('Precondition failed');
 		}
@@ -84,7 +78,7 @@ const api = db => {
 			name: req.body.name,
 			punchCount: req.body.punchCount
 		};
-		new Company(newCompany).save((err) => {
+		new Company(newCompany).save(err => {
 			if (err) {
 				res.statusCode = 412;
 				return res.send('Precondition failed');
@@ -97,14 +91,24 @@ const api = db => {
 		});
 	});
 
-
-
 	// Gets all users in the system
 	app.get('/api/users', function (req, res) {
-		return res.json(users);
+		User.find({}).exec((err, users) => {
+			if (err) {
+				res.status(500).json({ error: 'Failed to get users' });
+			} else {
+				console.log(users);
+				const filteredUsers = users.map(user => ({
+					id: user._id,
+					name: user.name,
+					gender: user.gender
+				}));
+				return res.json(filteredUsers);
+			}
+		});
 	});
 
-
+	// Creates a new user in the system
 	app.post('/api/users', function (req, res) {
 		const { name, gender } = req.body;
 		if (req.headers.authorization !== TOKEN) {
@@ -123,8 +127,8 @@ const api = db => {
 						.status(500)
 						.json({ error: 'Failed to save to database' }); // should this be the only error here?
 				} else {
-					const { _id, name, gender, token } = user;
-					res.json({ id: _id, name, gender, token });
+					const { token } = user;
+					res.json({ token });
 				}
 			});
 		}
