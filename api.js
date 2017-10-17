@@ -66,11 +66,8 @@ const api = db => {
 		}
 		if (
 			!req.body.hasOwnProperty('name') ||
-			!req.body.hasOwnProperty('punchCount') ||
-			req.body.name == '' ||
-			req.body.punchCount == null
+			req.body.name == ''
 		) {
-			console.log('fyrsta precondition failed');
 			res.statusCode = 412;
 			return res.send('Precondition failed');
 		}
