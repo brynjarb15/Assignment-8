@@ -34,7 +34,7 @@ const api = db => {
 				name: company.name,
 				punchCount: company.punchCount
 			}));
-			res.json({ company: filteredData });
+			res.json(filteredData);
 		});
 	});
 
