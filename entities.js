@@ -16,10 +16,10 @@ const companySchema = Schema({
 	}
 });
 
-const punchesSchema = Schema({
-	company_id: Number,
-	user_id: Number,
+const punchSchema = Schema({
+	company_id: String,
+	user_id: String,
 	created: Date,
 	used: Boolean
 });
-module.exports = { userSchema: userSchema, companySchema: companySchema };
+module.exports = { userSchema: userSchema, companySchema: companySchema, punchSchema: punchSchema };

@@ -1,11 +1,12 @@
 import express from 'express';
 import bodyParser from 'body-parser';
-import { userSchema, companySchema } from './entities.js';
+import { userSchema, companySchema, punchSchema } from './entities.js';
 import uuidv4 from 'uuid/v4';
 
 const api = db => {
 	const User = db.model('User', userSchema);
 	const Company = db.model('Company', companySchema);
+	const Punch = db.model('Punch', punchSchema);
 
 	var app = express();
 	app.use(bodyParser.json());
@@ -163,63 +164,125 @@ const api = db => {
 		}
 	});
 
-	// Creates a punch, associated with a user
-	app.post('/api/users/:id/punches', function (req, res) {
-		if (!req.body.hasOwnProperty('companyId')) {
+	app.post('/api/my/punches', function (req, res) {
+		const token = req.headers.authorization;
+		const companyId = req.body.companyId;
+
+		if (!token) {
 			res.statusCode = 400;
-			return res.send('Company Id is missing');
-		} else if (!isValidUser(req.params.id)) {
-			res.statusCode = 404;
-			return res.send('The user was not found in the system.');
-		} else if (!isValidCompany(req.body.companyId)) {
-			res.statusCode = 404;
-			return res.send(
-				'The company with the given id was not found in the system.'
-			);
+			return res.send('https://http.cat/400');
 		}
-
-		// We have valid data
-		var oldPunches =
-			punches.get(req.params.id) === undefined
-				? []
-				: punches.get(req.params.id);
-		oldPunches.push({
-			companyId: req.body.companyId,
-			companyName: getCompanyNameById(req.body.companyId),
-			created: new Date().toLocaleString()
-		});
-		punches.set(req.params.id, oldPunches);
-
-		res.json(true);
+		if (!companyId) {
+			res.statusCode = 300;
+			return res.send('https://http.cat/300');
+		}
+		let _userId;
+		let _lastPunch;
+		let _punchCount;
+		isValidCompany(companyId)
+			.then(isValid => {
+				if (!isValid) {
+					res.statusCode = 404;
+					return res.send('https://http.cat/404');
+				}
+				return isValid;
+			})
+			.then(isValid => {
+				return getUserIdByToken(token);
+			})
+			.then(userId => {
+				if (!userId) {
+					res.statusCode = 401;
+					return res.send('User not found');
+				}
+				_userId = userId;
+				return savePunchToDatabase(companyId, userId);
+			})
+			.then(punchId => {
+				_lastPunch = punchId;
+				return getPunchCountByCompanyId(companyId)
+			})
+			.then(punchCount => {
+				if (!punchCount) {
+					res.statusCode = 404;
+					return res.send('punchCount not found')
+				}
+				_punchCount = punchCount;
+				return getTotalUnusedPunches(companyId, _userId);
+			})
+			.then(totalUnusedPunches => {
+				if (!totalUnusedPunches) {
+					res.statusCode = 404;
+					return res.send('punchCount not found')
+				}
+				if (totalUnusedPunches === _punchCount) {
+					return Punch.update({ company_id: companyId, user_id: _userId, used: false }, { used: true }, { multi: true }, () => {
+						return res.status(200).json({ Discount: true });
+					});
+				} else {
+					return res.status(200).json({ id: _lastPunch });
+				}
+			})
+			.catch(err => {
+				res.statusCode = 500;
+				return res.send(err);
+			});
 	});
 
 	// Helper functions
-
-	/*function isValidUser(userId) {
-		for (var i = 0; i < users.length; i++) {
-			if (users[i].id == userId) {
-				return true;
+	function getUserIdByToken(token) {
+		return User.findOne(
+			{ token: token }, '_id'
+		).then(data => {
+			if (data) {
+				return data._id;
+			} else {
+				return null;
 			}
-		}
-		return false;
-	}
+		});
+	};
 
 	function isValidCompany(companyId) {
-		for (var i = 0; i < companies.length; i++) {
-			if (companies[i].id == companyId) {
+		return Company.findOne(
+			{ _id: companyId }, '_id'
+		).then(data => {
+			if (data) {
 				return true;
+			} else {
+				return false;
 			}
-		}
-		return false;
-	}
+		});
+	};
 
-	function getCompanyNameById(companyId) {
-		for (var i = 0; i < companies.length; i++) {
-			if (companies[i].id == companyId) {
-				return companies[i].name;
+	function getPunchCountByCompanyId(companyId) {
+		return Company.findOne(
+			{ _id: companyId }, 'punchCount'
+		).then(data => {
+			if (data) {
+				return data.punchCount;
+			} else {
+				return null;
 			}
-		}
-		return '';
-	}*/
-};
+		});
+	};
+
+	function getTotalUnusedPunches(companyId, userId) {
+		return Punch.count(
+			{ company_id: companyId, user_id: userId, used: false }
+		).then(number => {
+			if (number) {
+				return number;
+			} else {
+				return null;
+			}
+		});
+	};
+
+	function savePunchToDatabase(companyId, userId) {
+		const newPunch = new Punch({ company_id: companyId, user_id: userId, created: new Date(), used: false });
+		return newPunch.save().then(punch => {
+			return punch._id;
+		});
+	}
+}
 module.exports = { api };
