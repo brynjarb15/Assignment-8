@@ -103,7 +103,6 @@ const api = db => {
 
 
 	app.post('/api/users', function (req, res) {
-		console.log('jejeje');
 		const { name, gender } = req.body;
 		if (req.headers.authorization !== TOKEN) {
 			res.status(401).json();
