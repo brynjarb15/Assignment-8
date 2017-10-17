@@ -6,6 +6,7 @@ import uuidv4 from 'uuid/v4';
 const api = db => {
 	const User = db.model('User', userSchema);
 	const Company = db.model('Company', companySchema);
+
 	var app = express();
 	app.use(bodyParser.json());
 
@@ -22,28 +23,54 @@ const api = db => {
 	);
 
 	// Returns all companies, registered in the punchcard.com service
-	app.get('/api/companies', function(req, res) {
+	/*app.get('/api/companies', function (req, res) {
 		return res.json(companies);
+	});*/
+
+	//skila auðum lista þegar ekkert er í db
+	app.get('/api/companies', (req, res) => {
+		Company.find({}).exec((err, data) => {
+			const filteredData = data.map(company => ({
+				_id: company._id,
+				name: company.name,
+				punchCount: company.punchCount
+			}));
+			res.json({ company: filteredData });
+		});
 	});
 
 	// Registers a new company to the punchcard.com service
 	app.post('/api/companies', function(req, res) {
+		if (req.headers.authorization !== TOKEN) {
+			res.statusCode = 401;
+			return res.send('Not allowed');
+		}
 		if (
 			!req.body.hasOwnProperty('name') ||
-			!req.body.hasOwnProperty('punchCount')
+			!req.body.hasOwnProperty('punchCount') ||
+			req.body.name == '' ||
+			req.body.punchCount == null
 		) {
-			res.statusCode = 400;
-			return res.send('Post syntax error');
+			console.log('fyrsta precondition failed');
+			res.statusCode = 412;
+			return res.send('Precondition failed');
 		}
 		var newCompany = {
-			id: companies.length + 1,
 			name: req.body.name,
 			punchCount: req.body.punchCount
 		};
-
-		companies.push(newCompany);
-
-		res.json(true);
+		new Company(newCompany).save(err => {
+			if (err) {
+				res.statusCode = 412;
+				return res.send('Precondition failed');
+			} else {
+				res.statusCode = 201;
+				return res.send({
+					name: newCompany.name,
+					punchCount: newCompany.punchCount
+				});
+			}
+		});
 	});
 
 	// Gets a specific company, given a valid id
