@@ -65,12 +65,23 @@ const api = db => {
 
 	// Gets all users in the system
 	app.get('/api/users', function(req, res) {
-		return res.json(users);
+		User.find({}).exec((err, users) => {
+			if (err) {
+				res.status(500).json({ error: 'Failed to get users' });
+			} else {
+				console.log(users);
+				const filteredUsers = users.map(user => ({
+					id: user._id,
+					name: user.name,
+					gender: user.gender
+				}));
+				return res.json(filteredUsers);
+			}
+		});
 	});
 
 	// Creates a new user in the system
 	app.post('/api/users', function(req, res) {
-		console.log('jejeje');
 		const { name, gender } = req.body;
 		if (req.headers.authorization !== TOKEN) {
 			res.status(401).json();
@@ -88,8 +99,8 @@ const api = db => {
 						.status(500)
 						.json({ error: 'Failed to save to database' }); // should this be the only error here?
 				} else {
-					const { _id, name, gender, token } = user;
-					res.json({ id: _id, name, gender, token });
+					const { token } = user;
+					res.json({ token });
 				}
 			});
 		}
