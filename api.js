@@ -39,13 +39,13 @@ const api = db => {
 	});
 
 	// Gets a specific company, given a valid id
-	app.get('/api/companies/:id', function(req, res) {
+	app.get('/api/companies/:id', function (req, res) {
 		const id = req.params.id;
 		Company.findOne(
 			{ _id: id },
 			{ name: 1, punchCount: 1 }
 		).exec((err, data) => {
-			if (data === null) {
+			if (data === null && err == null) {
 				res.statusCode = 404;
 				return res.send('Company not found!');
 			} else if (err) {
@@ -60,7 +60,7 @@ const api = db => {
 	});
 
 	// Registers a new company to the punchcard.com service
-	app.post('/api/companies', function(req, res) {
+	app.post('/api/companies', function (req, res) {
 		if (req.headers.authorization !== TOKEN) {
 			res.statusCode = 401;
 			return res.send('Not allowed');
@@ -90,7 +90,7 @@ const api = db => {
 	});
 
 	// Gets all users in the system
-	app.get('/api/users', function(req, res) {
+	app.get('/api/users', function (req, res) {
 		// Get all the users
 		User.find({}).exec((err, users) => {
 			if (err) {
@@ -108,7 +108,7 @@ const api = db => {
 	});
 
 	// Creates a new user in the system
-	app.post('/api/users', function(req, res) {
+	app.post('/api/users', function (req, res) {
 		const { name, gender } = req.body;
 		// Authorization and error check
 		if (req.headers.authorization !== TOKEN) {
@@ -137,7 +137,7 @@ const api = db => {
 	});
 
 	// Returns a list of all punches, registered for the given user
-	app.get('/api/users/:id/punches', function(req, res) {
+	app.get('/api/users/:id/punches', function (req, res) {
 		if (!isValidUser(req.params.id)) {
 			res.statusCode = 404;
 			return res.send('User with given id was not found in the system.');
@@ -148,7 +148,7 @@ const api = db => {
 			if (filteredPunches) {
 				// The user already has some punches in his list
 				var returnList = [];
-				filteredPunches.forEach(function(value, idx) {
+				filteredPunches.forEach(function (value, idx) {
 					if (value.companyId == req.query.company) {
 						returnList.push(value);
 					}
@@ -167,7 +167,7 @@ const api = db => {
 	});
 
 	// Creates a punch, associated with a user
-	app.post('/api/users/:id/punches', function(req, res) {
+	app.post('/api/users/:id/punches', function (req, res) {
 		if (!req.body.hasOwnProperty('companyId')) {
 			res.statusCode = 400;
 			return res.send('Company Id is missing');
