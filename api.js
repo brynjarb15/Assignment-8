@@ -1,9 +1,12 @@
 import express from 'express';
 import bodyParser from 'body-parser';
 import { userSchema, companySchema } from './entities.js';
+
+
 const api = db => {
 	const User = db.model('User', userSchema);
 	const Company = db.model('Company', companySchema);
+	var TOKEN = 'Admin';
 	/*	new Company({ name: 'Brynjar', punchCount: 5 }).save((err, company) => {
 		if (err) {
 			console.log('ERROR');
@@ -25,32 +28,57 @@ const api = db => {
 	);
 
 	// Returns all companies, registered in the punchcard.com service
-	app.get('/api/companies', function(req, res) {
+	/*app.get('/api/companies', function (req, res) {
 		return res.json(companies);
+	});*/
+
+	//skila auðum lista þegar ekkert er í db
+	app.get('/api/companies', (req, res) => {
+		Company.find({}).exec((err, data) => {
+			const filteredData = data.map(company => ({
+				_id: company._id,
+				name: company.name,
+				punchCount: company.punchCount
+			}));
+			res.json({ company: filteredData });
+		})
 	});
 
 	// Registers a new company to the punchcard.com service
-	app.post('/api/companies', function(req, res) {
-		if (
-			!req.body.hasOwnProperty('name') ||
-			!req.body.hasOwnProperty('punchCount')
+	app.post('/api/companies', function (req, res) {
+		if (req.headers.authorization !== TOKEN) {
+			res.statusCode = 401
+			return res.send('Not allowed');
+		}
+		if (!req.body.hasOwnProperty('name') ||
+			!req.body.hasOwnProperty('punchCount') ||
+			req.body.name == "" ||
+			req.body.punchCount == null
 		) {
-			res.statusCode = 400;
-			return res.send('Post syntax error');
+			console.log("fyrsta precondition failed");
+			res.statusCode = 412;
+			return res.send('Precondition failed');
 		}
 		var newCompany = {
-			id: companies.length + 1,
 			name: req.body.name,
 			punchCount: req.body.punchCount
 		};
-
-		companies.push(newCompany);
-
-		res.json(true);
+		new Company(newCompany).save((err) => {
+			if (err) {
+				res.statusCode = 412;
+				return res.send('Precondition failed');
+			} else {
+				res.statusCode = 201;
+				return res.send({
+					name: newCompany.name,
+					punchCount: newCompany.punchCount
+				});
+			}
+		});
 	});
 
 	// Gets a specific company, given a valid id
-	app.get('/api/companies/:id', function(req, res) {
+	app.get('/api/companies/:id', function (req, res) {
 		var company;
 		for (var i = 0; i < companies.length; i++) {
 			if (companies[i].id == req.params.id) {
@@ -67,12 +95,12 @@ const api = db => {
 	});
 
 	// Gets all users in the system
-	app.get('/api/users', function(req, res) {
+	app.get('/api/users', function (req, res) {
 		return res.json(users);
 	});
 
 	// Creates a new user in the system
-	app.post('/api/users', function(req, res) {
+	app.post('/api/users', function (req, res) {
 		if (
 			!req.body.hasOwnProperty('name') ||
 			!req.body.hasOwnProperty('email')
@@ -91,7 +119,7 @@ const api = db => {
 	});
 
 	// Returns a list of all punches, registered for the given user
-	app.get('/api/users/:id/punches', function(req, res) {
+	app.get('/api/users/:id/punches', function (req, res) {
 		if (!isValidUser(req.params.id)) {
 			res.statusCode = 404;
 			return res.send('User with given id was not found in the system.');
@@ -102,7 +130,7 @@ const api = db => {
 			if (filteredPunches) {
 				// The user already has some punches in his list
 				var returnList = [];
-				filteredPunches.forEach(function(value, idx) {
+				filteredPunches.forEach(function (value, idx) {
 					if (value.companyId == req.query.company) {
 						returnList.push(value);
 					}
@@ -121,7 +149,7 @@ const api = db => {
 	});
 
 	// Creates a punch, associated with a user
-	app.post('/api/users/:id/punches', function(req, res) {
+	app.post('/api/users/:id/punches', function (req, res) {
 		if (!req.body.hasOwnProperty('companyId')) {
 			res.statusCode = 400;
 			return res.send('Company Id is missing');

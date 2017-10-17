@@ -13,4 +13,10 @@ const companySchema = Schema({
 	punchCount: Number
 });
 
+const punchesSchema = Schema({
+	company_id: Number,
+	user_id: Number,
+	created: Date,
+	used: Boolean
+});
 module.exports = { userSchema: userSchema, companySchema: companySchema };
