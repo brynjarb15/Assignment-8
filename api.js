@@ -1,7 +1,7 @@
 import express from 'express';
 import bodyParser from 'body-parser';
 import { userSchema, companySchema } from './entities.js';
-
+import uuidv4 from 'uuid/v4';
 
 const api = db => {
 	const User = db.model('User', userSchema);
@@ -16,6 +16,8 @@ const api = db => {
 	});*/
 	var app = express();
 	app.use(bodyParser.json());
+
+	var TOKEN = 'Admin';
 
 	// Defining data structures for companies and users in punchcard.com
 	var companies = [];
@@ -99,23 +101,31 @@ const api = db => {
 		return res.json(users);
 	});
 
-	// Creates a new user in the system
-	app.post('/api/users', function (req, res) {
-		if (
-			!req.body.hasOwnProperty('name') ||
-			!req.body.hasOwnProperty('email')
-		) {
-			res.statusCode = 400;
-			return res.send('User was not properly formatted');
-		}
-		var newUser = {
-			id: users.length + 1,
-			name: req.body.name,
-			email: req.body.email
-		};
-		users.push(newUser);
 
-		res.json(true);
+	app.post('/api/users', function (req, res) {
+		console.log('jejeje');
+		const { name, gender } = req.body;
+		if (req.headers.authorization !== TOKEN) {
+			res.status(401).json();
+		} else if (!req.body.hasOwnProperty('name') || !name.length) {
+			res.status(412).json({ error: 'User must have a name' });
+		} else if (!req.body.hasOwnProperty('gender') || !gender.length) {
+			res.status(412).json({ error: 'User must have an gender' });
+		} else if (!(gender === 'm' || gender === 'f' || gender === 'o')) {
+			res.status(412).json({ error: "Gender must be 'm', 'f' or 'o' " });
+		} else {
+			var userToken = uuidv4();
+			new User({ name, token: userToken, gender }).save((err, user) => {
+				if (err) {
+					res
+						.status(500)
+						.json({ error: 'Failed to save to database' }); // should this be the only error here?
+				} else {
+					const { _id, name, gender, token } = user;
+					res.json({ id: _id, name, gender, token });
+				}
+			});
+		}
 	});
 
 	// Returns a list of all punches, registered for the given user
