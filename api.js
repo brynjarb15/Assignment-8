@@ -6,13 +6,6 @@ import uuidv4 from 'uuid/v4';
 const api = db => {
 	const User = db.model('User', userSchema);
 	const Company = db.model('Company', companySchema);
-	/*new Company({ name: 'Brynjar', punchCount: 5 }).save((err, company) => {
-		if (err) {
-			console.log('ERROR');
-		} else {
-			console.log(company);
-		}
-	});*/
 	var app = express();
 	app.use(bodyParser.json());
 
