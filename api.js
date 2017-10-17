@@ -22,20 +22,40 @@ const api = db => {
 		console.log('Listening on port 3000')
 	);
 
-	// Returns all companies, registered in the punchcard.com service
-	/*app.get('/api/companies', function (req, res) {
-		return res.json(companies);
-	});*/
-
 	//skila auðum lista þegar ekkert er í db
 	app.get('/api/companies', (req, res) => {
 		Company.find({}).exec((err, data) => {
+			if (err) {
+				res.statusCode = 500;
+				return res.send('Internal server error!');
+			}
 			const filteredData = data.map(company => ({
-				_id: company._id,
+				_id: company._id, //hafa id með?
 				name: company.name,
 				punchCount: company.punchCount
 			}));
 			res.json({ company: filteredData });
+		});
+	});
+
+	// Gets a specific company, given a valid id
+	app.get('/api/companies/:id', function(req, res) {
+		const id = req.params.id;
+		Company.findOne(
+			{ _id: id },
+			{ name: 1, punchCount: 1 }
+		).exec((err, data) => {
+			if (data === null) {
+				res.statusCode = 404;
+				return res.send('Company not found!');
+			} else if (err) {
+				//breyta þessu í return res.status(404).json({error: 'Could not find company'});
+				res.statusCode = 500;
+				return res.send('Error when finding company!');
+			} else {
+				res.statusCode = 200;
+				return res.send(data);
+			}
 		});
 	});
 
@@ -66,28 +86,10 @@ const api = db => {
 			} else {
 				res.statusCode = 201;
 				return res.send({
-					name: newCompany.name,
-					punchCount: newCompany.punchCount
+					id: Company(newCompany)._id
 				});
 			}
 		});
-	});
-
-	// Gets a specific company, given a valid id
-	app.get('/api/companies/:id', function(req, res) {
-		var company;
-		for (var i = 0; i < companies.length; i++) {
-			if (companies[i].id == req.params.id) {
-				company = companies[i];
-				break;
-			}
-		}
-		if (company) {
-			return res.json(company);
-		} else {
-			res.statusCode = 404;
-			return res.send('Company with given id was not found');
-		}
 	});
 
 	// Gets all users in the system

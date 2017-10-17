@@ -10,7 +10,10 @@ const userSchema = new Schema({
 
 const companySchema = Schema({
 	name: String,
-	punchCount: Number
+	punchCount: {
+		type: Number,
+		default: 10
+	}
 });
 
 const punchesSchema = Schema({
