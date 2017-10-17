@@ -14,7 +14,7 @@ const api = db => {
 
 	// Defining data structures for companies and users in punchcard.com
 	var companies = [];
-	var users = [];
+	//var users = [];
 	var punches = new Map();
 
 	// Initialize listen for app to listen on a specific port, either provided or hardcoded
@@ -39,19 +39,20 @@ const api = db => {
 	});
 
 	// Gets a specific company, given a valid id
-	app.get('/api/companies/:id', function (req, res) {
+	app.get('/api/companies/:id', function(req, res) {
 		const id = req.params.id;
-		Company.findOne({ _id: id }, { name: 1, punchCount: 1 }).exec((err, data) => {
+		Company.findOne(
+			{ _id: id },
+			{ name: 1, punchCount: 1 }
+		).exec((err, data) => {
 			if (data === null) {
 				res.statusCode = 404;
 				return res.send('Company not found!');
-			}
-			else if (err) {
+			} else if (err) {
 				//breyta þessu í return res.status(404).json({error: 'Could not find company'});
 				res.statusCode = 500;
 				return res.send('Error when finding company!');
-			}
-			else {
+			} else {
 				res.statusCode = 200;
 				return res.send(data);
 			}
@@ -59,7 +60,7 @@ const api = db => {
 	});
 
 	// Registers a new company to the punchcard.com service
-	app.post('/api/companies', function (req, res) {
+	app.post('/api/companies', function(req, res) {
 		if (req.headers.authorization !== TOKEN) {
 			res.statusCode = 401;
 			return res.send('Not allowed');
@@ -89,12 +90,13 @@ const api = db => {
 	});
 
 	// Gets all users in the system
-	app.get('/api/users', function (req, res) {
+	app.get('/api/users', function(req, res) {
+		// Get all the users
 		User.find({}).exec((err, users) => {
 			if (err) {
 				res.status(500).json({ error: 'Failed to get users' });
 			} else {
-				console.log(users);
+				// We only want to return id, name and gender, not the token
 				const filteredUsers = users.map(user => ({
 					id: user._id,
 					name: user.name,
@@ -106,8 +108,9 @@ const api = db => {
 	});
 
 	// Creates a new user in the system
-	app.post('/api/users', function (req, res) {
+	app.post('/api/users', function(req, res) {
 		const { name, gender } = req.body;
+		// Authorization and error check
 		if (req.headers.authorization !== TOKEN) {
 			res.status(401).json();
 		} else if (!req.body.hasOwnProperty('name') || !name.length) {
@@ -117,6 +120,7 @@ const api = db => {
 		} else if (!(gender === 'm' || gender === 'f' || gender === 'o')) {
 			res.status(412).json({ error: "Gender must be 'm', 'f' or 'o' " });
 		} else {
+			// Use uuidv4 to make a token for the user
 			var userToken = uuidv4();
 			new User({ name, token: userToken, gender }).save((err, user) => {
 				if (err) {
@@ -124,6 +128,7 @@ const api = db => {
 						.status(500)
 						.json({ error: 'Failed to save to database' }); // should this be the only error here?
 				} else {
+					// Only return the token of the new user to the client
 					const { token } = user;
 					res.json({ token });
 				}
@@ -132,7 +137,7 @@ const api = db => {
 	});
 
 	// Returns a list of all punches, registered for the given user
-	app.get('/api/users/:id/punches', function (req, res) {
+	app.get('/api/users/:id/punches', function(req, res) {
 		if (!isValidUser(req.params.id)) {
 			res.statusCode = 404;
 			return res.send('User with given id was not found in the system.');
@@ -143,7 +148,7 @@ const api = db => {
 			if (filteredPunches) {
 				// The user already has some punches in his list
 				var returnList = [];
-				filteredPunches.forEach(function (value, idx) {
+				filteredPunches.forEach(function(value, idx) {
 					if (value.companyId == req.query.company) {
 						returnList.push(value);
 					}
@@ -162,7 +167,7 @@ const api = db => {
 	});
 
 	// Creates a punch, associated with a user
-	app.post('/api/users/:id/punches', function (req, res) {
+	app.post('/api/users/:id/punches', function(req, res) {
 		if (!req.body.hasOwnProperty('companyId')) {
 			res.statusCode = 400;
 			return res.send('Company Id is missing');
@@ -193,7 +198,7 @@ const api = db => {
 
 	// Helper functions
 
-	function isValidUser(userId) {
+	/*function isValidUser(userId) {
 		for (var i = 0; i < users.length; i++) {
 			if (users[i].id == userId) {
 				return true;
@@ -218,6 +223,6 @@ const api = db => {
 			}
 		}
 		return '';
-	}
+	}*/
 };
 module.exports = { api };
