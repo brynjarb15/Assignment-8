@@ -39,7 +39,7 @@ const api = db => {
 	});
 
 	// Gets a specific company, given a valid id
-	app.get('/api/companies/:id', function (req, res) {
+	app.get('/api/companies/:id', (req, res) => {
 		const id = req.params.id;
 		Company.findOne(
 			{ _id: id },
@@ -60,15 +60,12 @@ const api = db => {
 	});
 
 	// Registers a new company to the punchcard.com service
-	app.post('/api/companies', function (req, res) {
+	app.post('/api/companies', (req, res) => {
 		if (req.headers.authorization !== TOKEN) {
 			res.statusCode = 401;
 			return res.send('Not allowed');
 		}
-		if (
-			!req.body.hasOwnProperty('name') ||
-			req.body.name == ''
-		) {
+		if (!req.body.hasOwnProperty('name') || req.body.name === '') {
 			res.statusCode = 412;
 			return res.send('Precondition failed');
 		}
@@ -90,7 +87,7 @@ const api = db => {
 	});
 
 	// Gets all users in the system
-	app.get('/api/users', function (req, res) {
+	app.get('/api/users', (req, res) => {
 		// Get all the users
 		User.find({}).exec((err, users) => {
 			if (err) {
@@ -108,7 +105,7 @@ const api = db => {
 	});
 
 	// Creates a new user in the system
-	app.post('/api/users', function (req, res) {
+	app.post('/api/users', (req, res) => {
 		const { name, gender } = req.body;
 		// Authorization and error check
 		if (req.headers.authorization !== TOKEN) {
