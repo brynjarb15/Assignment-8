@@ -184,7 +184,7 @@ const api = db => {
 						return res.status(200).json({ Discount: true });
 					});
 				} else {
-					return res.status(200).json({ id: _lastPunch });
+					return res.status(201).json({ id: _lastPunch });
 				}
 			})
 			.catch(err => {
