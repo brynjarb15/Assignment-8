@@ -13,11 +13,6 @@ const api = db => {
 
 	var TOKEN = 'Admin';
 
-	// Defining data structures for companies and users in punchcard.com
-	var companies = [];
-	//var users = [];
-	var punches = new Map();
-
 	// Initialize listen for app to listen on a specific port, either provided or hardcoded
 	app.listen(process.env.PORT || 3000, () =>
 		console.log('Listening on port 3000')
@@ -31,7 +26,7 @@ const api = db => {
 				return res.send('Internal server error!');
 			}
 			const filteredData = data.map(company => ({
-				_id: company._id, //hafa id með?
+				_id: company._id,
 				name: company.name,
 				punchCount: company.punchCount
 			}));
@@ -50,7 +45,6 @@ const api = db => {
 				res.statusCode = 404;
 				return res.send('Company not found!');
 			} else if (err) {
-				//breyta þessu í return res.status(404).json({error: 'Could not find company'});
 				res.statusCode = 500;
 				return res.send('Error when finding company!');
 			} else {
@@ -124,7 +118,7 @@ const api = db => {
 				if (err) {
 					res
 						.status(500)
-						.json({ error: 'Failed to save to database' }); // should this be the only error here?
+						.json({ error: 'Failed to save to database' });
 				} else {
 					// Only return the token of the new user to the client
 					const { token } = user;
@@ -134,47 +128,17 @@ const api = db => {
 		}
 	});
 
-	// Returns a list of all punches, registered for the given user
-	app.get('/api/users/:id/punches', function (req, res) {
-		if (!isValidUser(req.params.id)) {
-			res.statusCode = 404;
-			return res.send('User with given id was not found in the system.');
-		}
-		// There was a ?company query provided
-		if (req.query.company) {
-			var filteredPunches = punches.get(req.params.id);
-			if (filteredPunches) {
-				// The user already has some punches in his list
-				var returnList = [];
-				filteredPunches.forEach(function (value, idx) {
-					if (value.companyId == req.query.company) {
-						returnList.push(value);
-					}
-				});
-				return res.json(returnList);
-			} else {
-				return res.json([]);
-			}
-		} else {
-			var retrievedPunches =
-				punches.get(req.params.id) === undefined
-					? []
-					: punches.get(req.params.id);
-			return res.json(retrievedPunches);
-		}
-	});
-
 	app.post('/api/my/punches', function (req, res) {
 		const token = req.headers.authorization;
 		const companyId = req.body.companyId;
 
 		if (!token) {
 			res.statusCode = 400;
-			return res.send('https://http.cat/400');
+			return res.send('Bad Request');
 		}
 		if (!companyId) {
-			res.statusCode = 300;
-			return res.send('https://http.cat/300');
+			res.statusCode = 404;
+			return res.send('Not Found');
 		}
 		let _userId;
 		let _lastPunch;
@@ -183,7 +147,7 @@ const api = db => {
 			.then(isValid => {
 				if (!isValid) {
 					res.statusCode = 404;
-					return res.send('https://http.cat/404');
+					return res.send('Not Found');
 				}
 				return isValid;
 			})
