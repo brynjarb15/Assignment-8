@@ -14,7 +14,7 @@ const api = db => {
 
 	// Defining data structures for companies and users in punchcard.com
 	var companies = [];
-	var users = [];
+	//var users = [];
 	var punches = new Map();
 
 	// Initialize listen for app to listen on a specific port, either provided or hardcoded
@@ -92,11 +92,12 @@ const api = db => {
 
 	// Gets all users in the system
 	app.get('/api/users', function(req, res) {
+		// Get all the users
 		User.find({}).exec((err, users) => {
 			if (err) {
 				res.status(500).json({ error: 'Failed to get users' });
 			} else {
-				console.log(users);
+				// We only want to return id, name and gender, not the token
 				const filteredUsers = users.map(user => ({
 					id: user._id,
 					name: user.name,
@@ -110,6 +111,7 @@ const api = db => {
 	// Creates a new user in the system
 	app.post('/api/users', function(req, res) {
 		const { name, gender } = req.body;
+		// Authorization and error check
 		if (req.headers.authorization !== TOKEN) {
 			res.status(401).json();
 		} else if (!req.body.hasOwnProperty('name') || !name.length) {
@@ -119,6 +121,7 @@ const api = db => {
 		} else if (!(gender === 'm' || gender === 'f' || gender === 'o')) {
 			res.status(412).json({ error: "Gender must be 'm', 'f' or 'o' " });
 		} else {
+			// Use uuidv4 to make a token for the user
 			var userToken = uuidv4();
 			new User({ name, token: userToken, gender }).save((err, user) => {
 				if (err) {
@@ -126,6 +129,7 @@ const api = db => {
 						.status(500)
 						.json({ error: 'Failed to save to database' }); // should this be the only error here?
 				} else {
+					// Only return the token of the new user to the client
 					const { token } = user;
 					res.json({ token });
 				}
@@ -195,7 +199,7 @@ const api = db => {
 
 	// Helper functions
 
-	function isValidUser(userId) {
+	/*function isValidUser(userId) {
 		for (var i = 0; i < users.length; i++) {
 			if (users[i].id == userId) {
 				return true;
@@ -220,6 +224,6 @@ const api = db => {
 			}
 		}
 		return '';
-	}
+	}*/
 };
 module.exports = { api };
