@@ -146,21 +146,21 @@ const api = db => {
 		isValidCompany(companyId)
 			.then(isValid => {
 				if (!isValid) {
-					res.statusCode = 404;
-					return res.send('Not Found');
+					throw new Error('CompanyNotValid');
+				} else {
+					return isValid;
 				}
-				return isValid;
 			})
 			.then(isValid => {
 				return getUserIdByToken(token);
 			})
 			.then(userId => {
 				if (!userId) {
-					res.statusCode = 401;
-					return res.send('User not found');
+					throw new Error('UserNotFound');
+				} else {
+					_userId = userId;
+					return savePunchToDatabase(companyId, userId);
 				}
-				_userId = userId;
-				return savePunchToDatabase(companyId, userId);
 			})
 			.then(punchId => {
 				_lastPunch = punchId;
@@ -168,28 +168,42 @@ const api = db => {
 			})
 			.then(punchCount => {
 				if (!punchCount) {
-					res.statusCode = 404;
-					return res.send('punchCount not found')
+					throw new Error('PunchCountNotFound');
+				} else {
+					_punchCount = punchCount;
+					return getTotalUnusedPunches(companyId, _userId);
 				}
-				_punchCount = punchCount;
-				return getTotalUnusedPunches(companyId, _userId);
 			})
 			.then(totalUnusedPunches => {
 				if (!totalUnusedPunches) {
-					res.statusCode = 404;
-					return res.send('punchCount not found')
-				}
-				if (totalUnusedPunches === _punchCount) {
-					return Punch.update({ company_id: companyId, user_id: _userId, used: false }, { used: true }, { multi: true }, () => {
-						return res.status(200).json({ Discount: true });
-					});
+					throw new Error('TotalUnusedPunchesNotFound');
 				} else {
-					return res.status(201).json({ id: _lastPunch });
+					if (totalUnusedPunches === _punchCount) {
+						return Punch.update({ company_id: companyId, user_id: _userId, used: false }, { used: true }, { multi: true }, () => {
+							return res.status(200).json({ Discount: true });
+						});
+					} else {
+						return res.status(201).json({ id: _lastPunch });
+					}
 				}
 			})
 			.catch(err => {
-				res.statusCode = 500;
-				return res.send(err);
+				if (err.message === 'CompanyNotValid') {
+					res.statusCode = 404;
+					return res.send('Not Found');
+				} else if (err.message === 'UserNotFound') {
+					res.statusCode = 401;
+					res.send('User not found');
+				} else if (err.message === 'PunchCountNotFound') {
+					res.statusCode = 404;
+					res.send('punchCount not found');
+				} else if (err.message === 'TotalUnusedPunchesNotFound') {
+					res.statusCode = 404;
+					res.send('punchCount not found');
+				} else {
+					res.statusCode = 500;
+					return res.send(err);
+				}
 			});
 	});
 
